@@ -34,7 +34,7 @@ export default function Editor() {
     
     timerRef.current = setTimeout(() => {
       saveActiveNote(newContent);
-    }, 500); // 500ms debounce auto-save
+    }, 2000); // 2 seconds debounce auto-save
   };
 
   if (!activeNote) {
