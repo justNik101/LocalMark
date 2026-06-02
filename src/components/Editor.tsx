@@ -15,23 +15,18 @@ export default function Editor() {
 
   // When activeNote changes, fetch its latest content fresh to ensure we have it if it wasn't preloaded
   useEffect(() => {
-    let isMounted = true;
     if (activeNote) {
-       // get the content. If activeNote.content exists we use it to start, but better to fetch from disk for freshness.
-       activeNote.handle.getFile().then(file => file.text()).then(text => {
-         if (isMounted) {
-           setContent(text);
-           setSaveStatus('idle');
-         }
-       });
+       setContent(activeNote.content || '');
+       setSaveStatus('idle');
     } else {
        setContent('');
     }
-    return () => { isMounted = false; };
   }, [activeNote?.name]);
 
   const handleManualSave = async () => {
     if (saveStatus === 'saving') return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    
     setSaveStatus('saving');
     try {
       await saveActiveNote(content);
