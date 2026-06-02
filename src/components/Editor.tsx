@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useAppStore } from '../store';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../lib/utils';
-import { ArrowLeft, BookOpen, Edit3, Trash, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, BookOpen, Edit3, Trash, CheckCircle2, Loader2, AlertCircle, Save } from 'lucide-react';
 
 export default function Editor() {
   const { activeNote, saveActiveNote, setActiveNote, deleteActiveNote } = useAppStore();
@@ -29,6 +29,18 @@ export default function Editor() {
     }
     return () => { isMounted = false; };
   }, [activeNote?.name]);
+
+  const handleManualSave = async () => {
+    if (saveStatus === 'saving') return;
+    setSaveStatus('saving');
+    try {
+      await saveActiveNote(content);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (err) {
+      setSaveStatus('error');
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
@@ -91,6 +103,14 @@ export default function Editor() {
           </div>
         </div>
           <div className="flex items-center gap-2">
+            <button 
+              onClick={handleManualSave}
+              disabled={saveStatus === 'saving'}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-zinc-900 text-sm font-medium transition-colors text-gray-700 dark:text-zinc-300 disabled:opacity-50"
+              title="Save note"
+            >
+              <Save className="w-4 h-4" />
+            </button>
             <button 
               onClick={() => {
                 if (window.confirm('Are you sure you want to delete this note?')) {
