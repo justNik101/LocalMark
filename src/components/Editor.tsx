@@ -39,7 +39,7 @@ export default function Editor() {
 
   if (!activeNote) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-white dark:bg-zinc-950 text-gray-400 dark:text-zinc-600">
+      <div className="flex h-full w-full items-center justify-center bg-white dark:bg-zinc-950 text-gray-400 dark:text-orange-400/50">
         <p>Select or create a note to begin.</p>
       </div>
     );
@@ -71,15 +71,15 @@ export default function Editor() {
       <div className="flex-1 overflow-y-auto px-6 py-8">
         <div className="max-w-3xl mx-auto h-full">
           {isPreview ? (
-            <div className="prose prose-blue dark:prose-invert max-w-none">
+            <div className="prose prose-blue dark:prose-invert dark:text-orange-400 dark:*:text-orange-400 max-w-none">
               <ReactMarkdown>{content || '*Empty note*'}</ReactMarkdown>
             </div>
           ) : (
             <textarea
               className={cn(
                 "w-full h-full resize-none outline-none bg-transparent",
-                "font-mono text-base leading-relaxed text-gray-900 dark:text-gray-100",
-                "placeholder:text-gray-300 dark:placeholder:text-zinc-700"
+                "font-mono text-base leading-relaxed text-gray-900 dark:text-orange-400",
+                "placeholder:text-gray-300 dark:placeholder:text-orange-700/50"
               )}
               value={content}
               onChange={handleChange}

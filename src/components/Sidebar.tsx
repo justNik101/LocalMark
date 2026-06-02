@@ -33,8 +33,8 @@ export function NoteItem({ note, isActive, onClick }: NoteItemProps) {
       className={cn(
         "group flex items-center justify-between px-3 py-2 cursor-pointer border-l-2 transition-colors",
         isActive 
-          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100" 
-          : "border-transparent hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-zinc-300"
+          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-orange-300" 
+          : "border-transparent hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-orange-400/80"
       )}
       onClick={() => {
         if (!isEditing) onClick(note);
@@ -48,7 +48,7 @@ export function NoteItem({ note, isActive, onClick }: NoteItemProps) {
              onChange={e => setRenameValue(e.target.value)}
              onBlur={handleRename}
              onKeyDown={onKeyDown}
-             className="bg-white dark:bg-zinc-900 border border-blue-500 rounded px-1 py-0.5 text-sm outline-none"
+             className="bg-white dark:bg-zinc-900 border border-blue-500 rounded px-1 py-0.5 text-sm outline-none text-gray-900 dark:text-orange-400"
              onClick={e => e.stopPropagation()}
            />
          ) : (
@@ -58,7 +58,7 @@ export function NoteItem({ note, isActive, onClick }: NoteItemProps) {
          )}
          <span className={cn(
              "text-xs mt-0.5",
-             isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-zinc-500"
+             isActive ? "text-blue-600 dark:text-orange-400/80" : "text-gray-500 dark:text-orange-400/50"
            )}>
            {format(new Date(note.lastModified), 'MMM d, yyyy')}
          </span>
@@ -105,12 +105,12 @@ export default function Sidebar() {
       {/* Header / Actions */}
       <div className="p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
-           <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate pr-2">
+           <h2 className="text-sm font-semibold text-gray-900 dark:text-orange-400 truncate pr-2">
              {rootHandle?.name || "Local Notes"}
            </h2>
            <button 
              onClick={unlinkRootFolder}
-             className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+             className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-orange-300"
              title="Switch Folder"
            >
               Switch
@@ -124,7 +124,7 @@ export default function Sidebar() {
             placeholder="Search notes..." 
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-md text-sm outline-none focus:border-blue-500 transition-colors"
+            className="w-full pl-9 pr-3 py-1.5 bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-md text-sm outline-none focus:border-blue-500 transition-colors text-gray-900 dark:text-orange-400"
           />
         </div>
         
@@ -147,7 +147,7 @@ export default function Sidebar() {
                  if (e.key === 'Enter') handleCreate();
                  if (e.key === 'Escape') setCreating(false);
                }}
-               className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm outline-none dark:bg-zinc-900"
+               className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm outline-none dark:bg-zinc-900 text-gray-900 dark:text-orange-400"
              />
              <button onClick={() => setCreating(false)} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-zinc-700">
                 <X className="w-3 h-3" />
@@ -159,7 +159,7 @@ export default function Sidebar() {
       <div className="flex-1 overflow-y-auto">
         {!searchQuery && recentNotes.length > 0 && (
           <div className="mb-4">
-             <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">
+             <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-orange-400/50">
                Recent
              </div>
              <div className="flex flex-col">
@@ -171,7 +171,7 @@ export default function Sidebar() {
         )}
 
         <div className="pb-4">
-           <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">
+           <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-orange-400/50">
              {searchQuery ? "Search Results" : "All Notes"}
            </div>
            <div className="flex flex-col">

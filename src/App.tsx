@@ -19,7 +19,7 @@ export default function App() {
   if (isInitializing) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-zinc-950">
-        <div className="animate-pulse text-gray-400">Loading...</div>
+        <div className="animate-pulse text-gray-400 dark:text-orange-400/50">Loading...</div>
       </div>
     );
   }
