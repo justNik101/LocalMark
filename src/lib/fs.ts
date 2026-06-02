@@ -75,7 +75,8 @@ export async function listItems(dirHandle: FileSystemDirectoryHandle): Promise<{
 
 export async function writeNote(handle: FileSystemFileHandle, content: string): Promise<number> {
   const writable = await handle.createWritable();
-  await writable.write(content);
+  const blob = new Blob([content], { type: 'text/markdown' });
+  await writable.write(blob);
   await writable.close();
   
   const file = await handle.getFile();

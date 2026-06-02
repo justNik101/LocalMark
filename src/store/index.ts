@@ -48,9 +48,9 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       if (handle) {
         // We have a stored handle, but we might not have permission yet
         // In some browsers, we need user interaction to re-verify permission.
-        // We will optimistically try if read permission is granted, 
+        // We will optimistically try if readwrite permission is granted, 
         // if not we clear it and prompt again (or wait for user gesture)
-        const hasPermission = await verifyPermission(handle, false);
+        const hasPermission = await verifyPermission(handle, true);
         if (hasPermission) {
           const { notesDirHandle, archiveDirHandle } = await ensureDirectories(handle);
           set({ 
