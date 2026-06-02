@@ -25,10 +25,12 @@ export default function Editor() {
     
     setSaveStatus('saving');
     try {
+      console.log('Executing manual save. Content length:', content.length);
       await saveNote(activeNote, content);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err) {
+      console.error('Manual save failed:', err);
       setSaveStatus('error');
     }
   };

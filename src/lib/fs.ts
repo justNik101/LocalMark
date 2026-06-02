@@ -74,12 +74,18 @@ export async function listItems(dirHandle: FileSystemDirectoryHandle): Promise<{
 }
 
 export async function writeNote(handle: FileSystemFileHandle, content: string): Promise<number> {
-  const writable = await handle.createWritable();
-  const blob = new Blob([content], { type: 'text/markdown' });
-  await writable.write(blob);
+  const writable = await handle.createWritable({keepExistingData: false});
+  await writable.write(content);
   await writable.close();
   
   const file = await handle.getFile();
+  console.log(`Saved file length: ${file.size}, text length expected: ${content.length}`);
+  
+  const actualText = await file.text();
+  if (actualText.length !== content.length) {
+    console.error("Content mismatch after write!");
+  }
+  
   return file.lastModified;
 }
 
