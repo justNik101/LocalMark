@@ -18,7 +18,7 @@ interface AppActions {
   loadNotes: () => Promise<void>;
   setActiveNote: (note: Note | null) => void;
   setSearchQuery: (query: string) => void;
-  saveActiveNote: (content: string) => Promise<void>;
+  saveNote: (note: Note, content: string) => Promise<void>;
   createNewNote: (name: string) => Promise<void>;
   createNewFolder: (name: string) => Promise<void>;
   deleteActiveNote: () => Promise<void>;
@@ -138,25 +138,22 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
     set({ searchQuery: query });
   },
 
-  saveActiveNote: async (content: string) => {
-    const { activeNote, notes } = get();
-    if (!activeNote) return;
-
+  saveNote: async (note: Note, content: string) => {
     try {
-      const lastModified = await writeNote(activeNote.handle, content);
+      const lastModified = await writeNote(note.handle, content);
       
-      // Update local state
-      const updatedNote: Note = { ...activeNote, content, lastModified };
-      // Title extraction might be heavy here, ideally done inside component or debounced.
-      // But let's just let listNotes handle it on reload, OR update locally roughly
+      const updatedNote: Note = { ...note, content, lastModified };
       
       const lines = content.split('\n');
       const h1 = lines.find(line => line.trim().startsWith('# '));
-      updatedNote.title = h1 ? h1.replace(/^#\s+/, '').trim() : activeNote.name.replace(/\.md$/, '');
+      updatedNote.title = h1 ? h1.replace(/^#\s+/, '').trim() : note.name.replace(/\.md$/, '');
 
+      const state = get();
+      const isActiveNow = state.activeNote?.name === note.name;
+      
       set({ 
-        activeNote: updatedNote,
-        notes: notes.map(n => n.name === activeNote.name ? updatedNote : n).sort((a,b) => b.lastModified - a.lastModified)
+        notes: state.notes.map(n => n.name === note.name ? updatedNote : n).sort((a,b) => b.lastModified - a.lastModified),
+        ...(isActiveNow ? { activeNote: updatedNote } : {})
       });
     } catch (e) {
       console.error('Failed to save note', e);

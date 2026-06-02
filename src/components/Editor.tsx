@@ -5,31 +5,34 @@ import { cn } from '../lib/utils';
 import { ArrowLeft, BookOpen, Edit3, Trash, CheckCircle2, Loader2, AlertCircle, Save } from 'lucide-react';
 
 export default function Editor() {
-  const { activeNote, saveActiveNote, setActiveNote, deleteActiveNote } = useAppStore();
+  const { activeNote, saveNote, setActiveNote, deleteActiveNote } = useAppStore();
   const [content, setContent] = useState('');
   const [isPreview, setIsPreview] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   
   // Ref for debouncing auto-save
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const contentRef = useRef(content);
 
   // When activeNote changes, fetch its latest content fresh to ensure we have it if it wasn't preloaded
   useEffect(() => {
     if (activeNote) {
        setContent(activeNote.content || '');
+       contentRef.current = activeNote.content || '';
        setSaveStatus('idle');
     } else {
        setContent('');
+       contentRef.current = '';
     }
   }, [activeNote?.name]);
 
   const handleManualSave = async () => {
-    if (saveStatus === 'saving') return;
     if (timerRef.current) clearTimeout(timerRef.current);
+    if (!activeNote) return;
     
     setSaveStatus('saving');
     try {
-      await saveActiveNote(content);
+      await saveNote(activeNote, contentRef.current);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err) {
@@ -40,20 +43,25 @@ export default function Editor() {
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
     setContent(newContent);
-    setSaveStatus('saving');
+    contentRef.current = newContent;
+    setSaveStatus('saving'); // can leave it or 'pending', but it's fine
+    
+    const noteToSave = activeNote; // capture in closure
     
     if (timerRef.current) clearTimeout(timerRef.current);
     
     timerRef.current = setTimeout(async () => {
+      if (!noteToSave) return;
       try {
-        await saveActiveNote(newContent);
+        await saveNote(noteToSave, newContent);
         setSaveStatus('saved');
         setTimeout(() => setSaveStatus('idle'), 2000);
       } catch (err) {
         setSaveStatus('error');
       }
-    }, 500); // 500ms debounce auto-save
+    }, 500);
   };
+
 
   if (!activeNote) {
     return (
