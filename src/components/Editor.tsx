@@ -2,12 +2,13 @@ import { useEffect, useState, useRef } from 'react';
 import { useAppStore } from '../store';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../lib/utils';
-import { ArrowLeft, BookOpen, Edit3, Trash } from 'lucide-react';
+import { ArrowLeft, BookOpen, Edit3, Trash, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 
 export default function Editor() {
   const { activeNote, saveActiveNote, setActiveNote, deleteActiveNote } = useAppStore();
   const [content, setContent] = useState('');
   const [isPreview, setIsPreview] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   
   // Ref for debouncing auto-save
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -18,7 +19,10 @@ export default function Editor() {
     if (activeNote) {
        // get the content. If activeNote.content exists we use it to start, but better to fetch from disk for freshness.
        activeNote.handle.getFile().then(file => file.text()).then(text => {
-         if (isMounted) setContent(text);
+         if (isMounted) {
+           setContent(text);
+           setSaveStatus('idle');
+         }
        });
     } else {
        setContent('');
@@ -29,12 +33,19 @@ export default function Editor() {
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
     setContent(newContent);
+    setSaveStatus('saving');
     
     if (timerRef.current) clearTimeout(timerRef.current);
     
-    timerRef.current = setTimeout(() => {
-      saveActiveNote(newContent);
-    }, 2000); // 2 seconds debounce auto-save
+    timerRef.current = setTimeout(async () => {
+      try {
+        await saveActiveNote(newContent);
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } catch (err) {
+        setSaveStatus('error');
+      }
+    }, 500); // 500ms debounce auto-save
   };
 
   if (!activeNote) {
@@ -57,6 +68,26 @@ export default function Editor() {
           </button>
           <div className="text-sm font-medium text-gray-500 truncate max-w-[200px] md:max-w-[400px]">
             {activeNote.name}
+          </div>
+          <div className="hidden sm:flex items-center gap-1.5 ml-2">
+            {saveStatus === 'saving' && (
+              <span className="flex items-center gap-1 text-xs text-blue-500">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Saving...
+              </span>
+            )}
+            {saveStatus === 'saved' && (
+              <span className="flex items-center gap-1 text-xs text-green-500 dark:text-green-400">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Saved
+              </span>
+            )}
+            {saveStatus === 'error' && (
+              <span className="flex items-center gap-1 text-xs text-red-500 dark:text-red-400">
+                <AlertCircle className="w-3.5 h-3.5" />
+                Save Failed
+              </span>
+            )}
           </div>
         </div>
           <div className="flex items-center gap-2">

@@ -161,6 +161,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
     } catch (e) {
       console.error('Failed to save note', e);
       set({ error: 'Failed to save note. Ensure you have granted write permissions.' });
+      throw e;
     }
   },
 
