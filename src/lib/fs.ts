@@ -41,8 +41,9 @@ export function extractTitle(content: string, filename: string): string {
   return filename.replace(/\.md$/, '');
 }
 
-export async function listNotes(dirHandle: FileSystemDirectoryHandle): Promise<Note[]> {
+export async function listItems(dirHandle: FileSystemDirectoryHandle): Promise<{notes: Note[], folders: any[]}> {
   const notes: Note[] = [];
+  const folders: any[] = [];
 
   for await (const entry of (dirHandle as any).values()) {
     if (entry.kind === 'file' && entry.name.endsWith('.md')) {
@@ -56,15 +57,20 @@ export async function listNotes(dirHandle: FileSystemDirectoryHandle): Promise<N
         handle: fileHandle,
         lastModified: file.lastModified,
         title,
-        // We won't load the full content into memory for all notes immediately to be scalable,
-        // but for now let's just make search work by having contents or refetching later.
-        // Given offline first and text files, it's fine to load to support search.
         content,
+      });
+    } else if (entry.kind === 'directory' && entry.name !== '.Trash') {
+      folders.push({
+        name: entry.name,
+        handle: entry as FileSystemDirectoryHandle,
       });
     }
   }
 
-  return notes.sort((a, b) => b.lastModified - a.lastModified);
+  return {
+    notes: notes.sort((a, b) => b.lastModified - a.lastModified),
+    folders: folders.sort((a, b) => a.name.localeCompare(b.name))
+  };
 }
 
 export async function writeNote(handle: FileSystemFileHandle, content: string): Promise<number> {

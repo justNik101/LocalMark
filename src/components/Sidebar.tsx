@@ -1,6 +1,6 @@
-import { Note } from '../types';
+import { Note, Folder } from '../types';
 import { useAppStore } from '../store';
-import { FileText, Search, Pencil, Trash, X } from 'lucide-react';
+import { FileText, Search, Pencil, Trash, X, Folder as FolderIcon, ArrowLeft, FolderPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { useState } from 'react';
 import { cn } from '../lib/utils';
@@ -78,10 +78,31 @@ export function NoteItem({ note, isActive, onClick }: NoteItemProps) {
   );
 }
 
+interface FolderItemProps {
+  folder: Folder;
+  onClick: (folder: Folder) => void;
+}
+
+export function FolderItemView({ folder, onClick }: FolderItemProps) {
+  return (
+    <div 
+      className="group flex items-center justify-between px-3 py-2 cursor-pointer border-l-2 border-transparent hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-orange-400/80 transition-colors"
+      onClick={() => onClick(folder)}
+    >
+      <div className="flex items-center gap-2 overflow-hidden w-full">
+        <FolderIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
+        <span className="font-medium truncate text-sm">
+          {folder.name}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function Sidebar() {
-  const { notes, activeNote, setActiveNote, searchQuery, setSearchQuery, createNewNote, unlinkRootFolder, rootHandle } = useAppStore();
-  const [creating, setCreating] = useState(false);
-  const [newNoteName, setNewNoteName] = useState('');
+  const { notes, folders, activeNote, setActiveNote, searchQuery, setSearchQuery, createNewNote, createNewFolder, navigateToFolder, navigateUp, folderStack, unlinkRootFolder, rootHandle } = useAppStore();
+  const [creating, setCreating] = useState<'note' | 'folder' | false>(false);
+  const [newTitle, setNewTitle] = useState('');
 
   const filteredNotes = notes.filter(n => {
     if (!searchQuery) return true;
@@ -89,13 +110,22 @@ export default function Sidebar() {
     return n.name.toLowerCase().includes(q) || n.title.toLowerCase().includes(q) || (n.content && n.content.toLowerCase().includes(q));
   });
   
+  const filteredFolders = folders.filter(f => {
+    if (!searchQuery) return true;
+    return f.name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+  
   const recentNotes = notes.slice(0, 5); // Last 5 edited notes
 
   const handleCreate = async () => {
-    if (newNoteName.trim()) {
-      await createNewNote(newNoteName.trim());
+    if (newTitle.trim()) {
+      if (creating === 'note') {
+        await createNewNote(newTitle.trim());
+      } else if (creating === 'folder') {
+        await createNewFolder(newTitle.trim());
+      }
       setCreating(false);
-      setNewNoteName('');
+      setNewTitle('');
     }
   }
 
@@ -105,13 +135,13 @@ export default function Sidebar() {
       {/* Header / Actions */}
       <div className="p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
-           <h2 className="text-sm font-semibold text-gray-900 dark:text-orange-400 truncate pr-2">
-             {rootHandle?.name || "Local Notes"}
+           <h2 className="text-sm font-semibold text-gray-900 dark:text-orange-400 truncate pr-2 max-w-[200px]">
+             {folderStack.length > 0 ? folderStack.map(f => f.name).join(' / ') : (rootHandle?.name || "Local Notes")}
            </h2>
            <button 
              onClick={unlinkRootFolder}
-             className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-orange-300"
-             title="Switch Folder"
+             className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-orange-300 flex-shrink-0"
+             title="Switch Root Folder"
            >
               Switch
            </button>
@@ -128,21 +158,30 @@ export default function Sidebar() {
           />
         </div>
         
-        <button 
-          onClick={() => setCreating(true)}
-          className="w-full flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded-md text-sm font-medium transition-colors"
-        >
-          <FileText className="w-4 h-4" />
-          New Note
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setCreating('note')}
+            className="flex-1 flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded-md text-sm font-medium transition-colors"
+          >
+            <FileText className="w-4 h-4" />
+            Note
+          </button>
+          <button 
+            onClick={() => setCreating('folder')}
+            className="flex-1 flex items-center justify-center gap-1 bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-700 dark:text-orange-400 py-1.5 rounded-md text-sm font-medium transition-colors"
+          >
+            <FolderPlus className="w-4 h-4" />
+            Folder
+          </button>
+        </div>
         
         {creating && (
           <div className="flex items-center gap-1 mt-1">
              <input
                autoFocus
-               placeholder="Note name..."
-               value={newNoteName}
-               onChange={e => setNewNoteName(e.target.value)}
+               placeholder={creating === 'note' ? "Note name..." : "Folder name..."}
+               value={newTitle}
+               onChange={e => setNewTitle(e.target.value)}
                onKeyDown={(e) => {
                  if (e.key === 'Enter') handleCreate();
                  if (e.key === 'Escape') setCreating(false);
@@ -157,7 +196,19 @@ export default function Sidebar() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {!searchQuery && recentNotes.length > 0 && (
+        {folderStack.length > 1 && !searchQuery && (
+          <div className="px-3 py-2 border-b border-gray-100 dark:border-zinc-800">
+            <button 
+              onClick={navigateUp} 
+              className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 dark:text-orange-400/80 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
+          </div>
+        )}
+
+        {!searchQuery && recentNotes.length > 0 && folderStack.length === 1 && (
           <div className="mb-4">
              <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-orange-400/50">
                Recent
@@ -171,16 +222,19 @@ export default function Sidebar() {
         )}
 
         <div className="pb-4">
-           <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-orange-400/50">
-             {searchQuery ? "Search Results" : "All Notes"}
+           <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-orange-400/50 mt-2">
+             {searchQuery ? "Search Results" : "Contents"}
            </div>
            <div className="flex flex-col">
+             {filteredFolders.map(f => (
+               <FolderItemView key={f.name} folder={f} onClick={(folder) => navigateToFolder(folder.handle, folder.name)} />
+             ))}
              {filteredNotes.map(n => (
                <NoteItem key={n.name} note={n} isActive={activeNote?.name === n.name} onClick={setActiveNote} />
              ))}
-             {filteredNotes.length === 0 && (
+             {filteredNotes.length === 0 && filteredFolders.length === 0 && (
                <div className="px-4 py-3 text-sm text-gray-500">
-                 No notes found.
+                 No items found.
                </div>
              )}
            </div>

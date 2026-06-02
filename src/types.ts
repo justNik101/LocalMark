@@ -6,11 +6,22 @@ export interface Note {
   content?: string;
 }
 
+export interface Folder {
+  name: string;
+  handle: FileSystemDirectoryHandle;
+}
+
 export interface AppState {
   rootHandle: FileSystemDirectoryHandle | null;
   notesDirHandle: FileSystemDirectoryHandle | null;
   archiveDirHandle: FileSystemDirectoryHandle | null;
+  
+  currentFolderHandle: FileSystemDirectoryHandle | null;
+  folderStack: { name: string, handle: FileSystemDirectoryHandle }[];
+  
   notes: Note[];
+  folders: Folder[];
+  
   activeNote: Note | null;
   searchQuery: string;
   isInitializing: boolean;

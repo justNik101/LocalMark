@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import { AppState, Note } from '../types';
+import { AppState, Note, Folder } from '../types';
 import { clearRootHandle, getRootHandle, saveRootHandle } from '../lib/storage';
 import {
   ensureDirectories,
-  listNotes,
+  listItems,
   createNote as fsCreateNote,
   deleteNote as fsDeleteNote,
   renameNote as fsRenameNote,
@@ -20,15 +20,23 @@ interface AppActions {
   setSearchQuery: (query: string) => void;
   saveActiveNote: (content: string) => Promise<void>;
   createNewNote: (name: string) => Promise<void>;
+  createNewFolder: (name: string) => Promise<void>;
   deleteActiveNote: () => Promise<void>;
   renameActiveNote: (newName: string) => Promise<void>;
+  navigateToFolder: (handle: FileSystemDirectoryHandle, name: string) => Promise<void>;
+  navigateUp: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState & AppActions>((set, get) => ({
   rootHandle: null,
   notesDirHandle: null,
   archiveDirHandle: null,
+  
+  currentFolderHandle: null,
+  folderStack: [],
   notes: [],
+  folders: [],
+  
   activeNote: null,
   searchQuery: '',
   isInitializing: true,
@@ -45,7 +53,13 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
         const hasPermission = await verifyPermission(handle, false);
         if (hasPermission) {
           const { notesDirHandle, archiveDirHandle } = await ensureDirectories(handle);
-          set({ rootHandle: handle, notesDirHandle, archiveDirHandle });
+          set({ 
+            rootHandle: handle, 
+            notesDirHandle, 
+            archiveDirHandle,
+            currentFolderHandle: notesDirHandle,
+            folderStack: [{ name: 'Notes', handle: notesDirHandle }]
+          });
           await get().loadNotes();
         } else {
            // We might need to ask for permission. We will set the rootHandle so the UI can show a "Resume" button
@@ -70,7 +84,14 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       await saveRootHandle(handle);
       const { notesDirHandle, archiveDirHandle } = await ensureDirectories(handle);
       
-      set({ rootHandle: handle, notesDirHandle, archiveDirHandle, error: null });
+      set({ 
+        rootHandle: handle, 
+        notesDirHandle, 
+        archiveDirHandle, 
+        currentFolderHandle: notesDirHandle,
+        folderStack: [{ name: 'Notes', handle: notesDirHandle }],
+        error: null 
+      });
       await get().loadNotes();
     } catch (e: any) {
       if (e.name !== 'AbortError') {
@@ -86,7 +107,10 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       rootHandle: null,
       notesDirHandle: null,
       archiveDirHandle: null,
+      currentFolderHandle: null,
+      folderStack: [],
       notes: [],
+      folders: [],
       activeNote: null,
       searchQuery: '',
       error: null
@@ -94,15 +118,15 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
   },
 
   loadNotes: async () => {
-    const { notesDirHandle } = get();
-    if (!notesDirHandle) return;
+    const { currentFolderHandle } = get();
+    if (!currentFolderHandle) return;
     
     try {
-      const notes = await listNotes(notesDirHandle);
-      set({ notes });
+      const { notes, folders } = await listItems(currentFolderHandle);
+      set({ notes, folders });
     } catch (e) {
-      console.error('Failed to load notes', e);
-      set({ error: 'Failed to load notes' });
+      console.error('Failed to load items', e);
+      set({ error: 'Failed to load items' });
     }
   },
 
@@ -141,11 +165,11 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
   },
 
   createNewNote: async (name: string) => {
-    const { notesDirHandle } = get();
-    if (!notesDirHandle) return;
+    const { currentFolderHandle } = get();
+    if (!currentFolderHandle) return;
 
     try {
-      const handle = await fsCreateNote(notesDirHandle, name);
+      const handle = await fsCreateNote(currentFolderHandle, name);
       // Let's reload to get a consistent state
       await get().loadNotes();
       
@@ -162,11 +186,11 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
   },
 
   deleteActiveNote: async () => {
-    const { activeNote, notesDirHandle } = get();
-    if (!activeNote || !notesDirHandle) return;
+    const { activeNote, currentFolderHandle } = get();
+    if (!activeNote || !currentFolderHandle) return;
 
     try {
-      await fsDeleteNote(notesDirHandle, activeNote.name);
+      await fsDeleteNote(currentFolderHandle, activeNote.name);
       set({ activeNote: null });
       await get().loadNotes();
     } catch(e) {
@@ -176,11 +200,11 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
   },
 
   renameActiveNote: async (newName: string) => {
-    const { activeNote, notesDirHandle } = get();
-    if (!activeNote || !notesDirHandle) return;
+    const { activeNote, currentFolderHandle } = get();
+    if (!activeNote || !currentFolderHandle) return;
     
     try {
-      const newHandle = await fsRenameNote(notesDirHandle, activeNote.name, newName);
+      const newHandle = await fsRenameNote(currentFolderHandle, activeNote.name, newName);
       await get().loadNotes();
       
       const newNotes = get().notes;
@@ -192,6 +216,43 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       console.error('Failed to rename', e);
       set({ error: 'Failed to rename note' });
     }
+  },
+  
+  createNewFolder: async (name: string) => {
+    const { currentFolderHandle } = get();
+    if (!currentFolderHandle) return;
+    try {
+      await currentFolderHandle.getDirectoryHandle(name, { create: true });
+      await get().loadNotes();
+    } catch (e) {
+      console.error('Failed to create folder', e);
+      set({ error: 'Failed to create folder' });
+    }
+  },
+  
+  navigateToFolder: async (handle, name) => {
+    const { folderStack } = get();
+    set({ 
+      currentFolderHandle: handle,
+      folderStack: [...folderStack, { name, handle }],
+      activeNote: null,
+      searchQuery: ''
+    });
+    await get().loadNotes();
+  },
+  
+  navigateUp: async () => {
+    const { folderStack } = get();
+    if (folderStack.length <= 1) return;
+    const newStack = folderStack.slice(0, -1);
+    const newCurrent = newStack[newStack.length - 1].handle;
+    set({
+      currentFolderHandle: newCurrent,
+      folderStack: newStack,
+      activeNote: null,
+      searchQuery: ''
+    });
+    await get().loadNotes();
   }
 
 }));

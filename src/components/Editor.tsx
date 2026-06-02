@@ -2,10 +2,10 @@ import { useEffect, useState, useRef } from 'react';
 import { useAppStore } from '../store';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../lib/utils';
-import { ArrowLeft, BookOpen, Edit3 } from 'lucide-react';
+import { ArrowLeft, BookOpen, Edit3, Trash } from 'lucide-react';
 
 export default function Editor() {
-  const { activeNote, saveActiveNote, setActiveNote } = useAppStore();
+  const { activeNote, saveActiveNote, setActiveNote, deleteActiveNote } = useAppStore();
   const [content, setContent] = useState('');
   const [isPreview, setIsPreview] = useState(false);
   
@@ -59,13 +59,26 @@ export default function Editor() {
             {activeNote.name}
           </div>
         </div>
-        <button 
-          onClick={() => setIsPreview(!isPreview)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-zinc-900 text-sm font-medium transition-colors text-gray-700 dark:text-zinc-300"
-        >
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => {
+                if (window.confirm('Are you sure you want to delete this note?')) {
+                  deleteActiveNote();
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 text-sm font-medium transition-colors text-red-600 dark:text-red-400"
+              title="Delete note"
+            >
+              <Trash className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => setIsPreview(!isPreview)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-zinc-900 text-sm font-medium transition-colors text-gray-700 dark:text-zinc-300"
+            >
           {isPreview ? <Edit3 className="w-4 h-4" /> : <BookOpen className="w-4 h-4" />}
           {isPreview ? "Edit" : "Preview"}
         </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-8">
