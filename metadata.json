@@ -1,0 +1,6 @@
+{
+  "name": "Local Notes",
+  "description": "A local-first, distraction-free markdown note-taking application using the File System Access API.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
